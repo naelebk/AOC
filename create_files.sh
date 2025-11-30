@@ -1,16 +1,16 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 current_year=$(date +'%Y')
 mkdir "${current_year}"
 test -d "${current_year}" && cd "${current_year}"
+first_day=1
+last_day=12
 
-for i in $(seq 1 25);do
+for i in $(seq "${first_day}" "${last_day}");do
 	mkdir "day${i}"
 	cd "day${i}"
 	second=2
-	if ((i == 25)); then
-		second=1
-	fi
+	#if ((i == last_day)); then second=1; fi
 	for j in $(seq 1 "${second}"); do
 		echo '#!/usr/bin/env ruby' >> "part${j}.rb"
 		echo "# part${j}.rb" >> "part${j}.rb"
