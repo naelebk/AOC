@@ -2,7 +2,7 @@
 # part1.rb
 require_relative '../../utils.rb'
 
-input = Utils.read_lines('day1-sample-input.txt')
+input = Utils.read_lines('day1-input.txt')
 code = 50
 count = 0 
 
