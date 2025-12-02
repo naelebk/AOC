@@ -2,6 +2,10 @@
 # part1.rb
 require_relative '../../utils.rb'
 
+YEAR = 2025
+DAY = 1
+LEVEL = 1
+
 input = Utils.read_lines('day1-input.txt')
 code = 50
 count = 0 
@@ -19,3 +23,5 @@ end
 
 puts count
 
+cookie = Utils.get_cookie
+response = Utils.submit_answer(YEAR, DAY, LEVEL, count, cookie)

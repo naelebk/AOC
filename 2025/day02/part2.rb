@@ -2,6 +2,10 @@
 # part2.rb
 require_relative '../../utils.rb'
 
+YEAR = 2025
+DAY = 2
+LEVEL = 2
+
 def is_valid_id(id)
   the_id = id.to_s
   length = the_id.length
@@ -28,3 +32,6 @@ items.each do |range|
   first.upto(last) do |i| sum += i unless is_valid_id(i) end
 end
 puts sum
+
+cookie = Utils.get_cookie
+Utils.submit_answer(YEAR, DAY, LEVEL, sum, cookie)
