@@ -2,7 +2,7 @@
 # part1.rb
 require_relative '../../utils.rb'
 
-def is_valid_id(id)
+def is_invalid_id(id)
   the_id = id.to_s
   mid = the_id.length / 2
   first_part = the_id.slice(0...mid)
@@ -18,6 +18,6 @@ items.each do |range|
   first, last = range.split('-')
   first = first.to_i
   last = last.to_i
-  first.upto(last) do |i| sum += i if is_valid_id(i) end
+  first.upto(last) do |i| sum += i if is_invalid_id(i) end
 end
 puts sum
