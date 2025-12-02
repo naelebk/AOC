@@ -1,5 +1,20 @@
 require "set"
 require "pqueue"
+require "net/http"
+require "uri"
+require "openssl"
+
+COLOR = {
+  red: "\033[1;31m",
+  green: "\033[1;32m",
+  yellow: "\033[1;33m",
+  blue: "\033[1;34m",
+  cyan: "\033[1;36m",
+  purple: "\033[1;35m",
+  nc: "\033[0m"
+}
+
+COOKIE_PATH='/home/nael/Documents/AOC/.cookie.txt'
 
 module Utils
   #################################
@@ -845,4 +860,81 @@ module Utils
     end
     nil
   end
+
+  # FONCTIONS SPÉCIFIQUES À L'ADVENT OF CODE
+
+
+  # Affiche dans la color souhaitée un texte
+  # @param color la couleur souhaitée
+  # @parem text le texte à afficher
+  # @return nil
+  # @example
+  #   my_puts(:green, "Hello world !")
+  #   => Hello world ! (mais en vert)
+  def self.my_puts(color, text)
+    puts "#{COLOR[color]}#{text}#{COLOR[:nc]}"
+  end
+
+
+  # Soumet une réponse à l'Advent of Code via l'API
+  #
+  # @param year [Integer] l'année de l'événement (ex: 2024)
+  # @param day [Integer] le jour du calendrier (1-25)
+  # @param level [Integer] le niveau de la partie (1 ou 2)
+  # @param answer [Integer, String] la réponse calculée à soumettre
+  # @param session_cookie [String] le cookie de session pour l'authentification
+  # @return [void] affiche le résultat de la soumission
+  def self.submit_answer(year, day, level, answer, session_cookie)
+    uri = URI("https://adventofcode.com/#{year}/day/#{day}/answer")
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = true
+    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+    request = Net::HTTP::Post.new(uri)
+    request['Cookie'] = "session=#{session_cookie}"
+    request['User-Agent'] = "ruby-script by Nael"
+    request.set_form_data({
+      'level' => level,
+      'answer' => answer
+    })
+    response = http.request(request)
+    my_puts(:green, "HTTP #{response.code}")
+    parse_response(response.body)
+  end
+
+  # Analyse la réponse HTML de l'Advent of Code et affiche le résultat coloré
+  #
+  # @param html [String] le contenu HTML de la réponse du serveur
+  # @return [void] affiche le message approprié selon le résultat
+  def self.parse_response(html)
+    #puts html
+    if html.include?("That's the right answer")
+      my_puts(:green, "OK !")
+    elsif html.include?("That's not the right answer")
+      my_puts(:red, "KO !")
+      if html.include?("too high")
+        my_puts(:yellow, "Trop haut !")
+      elsif html.include?("too low")
+        my_puts(:yellow, "Trop bas !")
+      end
+    elsif html.include?("You gave an answer too recently")
+      my_puts(:yellow, "Déjà répondu au problème")
+    elsif html.include?("Did you already complete it")
+      my_puts(:green, "Niveau déjà complété")
+    else
+      my_puts(:red, "Réponse inattendue...")
+      puts html[0..500]
+    end
+  end
+
+  # Récupère le cookie de session depuis le fichier .cookie.txt
+  #
+  # @return [String] le cookie de session (première ligne du fichier)
+  def self.get_cookie
+    File.readlines(COOKIE_PATH)[0].strip
+  rescue Errno::ENOENT
+    raise "Fichier .cookie.txt introuvable."
+  rescue => e
+    raise "Erreur lors de la lecture du cookie : #{e.message}"
+  end
+
 end

@@ -6,6 +6,8 @@ YEAR = 2025
 DAY = 3
 LEVEL = 1
 
+input = Utils.read_lines('day3-input.txt')
+
 sum = 0
 
 cookie = Utils.get_cookie
