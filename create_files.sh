@@ -13,9 +13,14 @@ test -d "${current_year}" && cd "${current_year}"
 first_day=1
 last_day=12
 
-for i in $(seq "${first_day}" "${last_day}");do
-	mkdir "day${i}"
-	cd "day${i}"
+for i in $(seq "${first_day}" "${last_day}"); do
+	if [ $i -lt 10 ]; then
+		the_dir="day0${i}"
+	else
+		the_dir="day${i}"
+	fi
+	mkdir "${the_dir}"
+	cd "${the_dir}"
 	second=2
 	#if ((i == last_day)); then second=1; fi
 	for j in $(seq 1 "${second}"); do
