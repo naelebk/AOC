@@ -11,7 +11,7 @@ input = Utils.read_lines('day3-input.txt')
 sum = 0
 
 input.each do |line|
-  digits = line.strip.chars.map(&:to_i)
+  digits = Utils.digits(line)
   max_shock = 0
   (0...digits.length).each do |i|
     ((i+1)...digits.length).each do |j|
