@@ -917,7 +917,7 @@ module Utils
         my_puts(:yellow, "Trop bas !")
       end
     elsif html.include?("You gave an answer too recently")
-      my_puts(:yellow, "Déjà répondu au problème")
+      my_puts(:yellow, "Réponse donnée trop récemment ! Il faut attendre un peu.")
     elsif html.include?("Did you already complete it")
       my_puts(:green, "Niveau déjà complété")
     else
