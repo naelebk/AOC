@@ -10,8 +10,8 @@ else
 fi
 mkdir "${current_year}"
 test -d "${current_year}" && cd "${current_year}"
-first_day=4
-last_day=12
+first_day=1
+last_day=25
 
 for i in $(seq "${first_day}" "${last_day}"); do
 	if [ $i -lt 10 ]; then
@@ -22,7 +22,7 @@ for i in $(seq "${first_day}" "${last_day}"); do
 	mkdir "${the_dir}"
 	cd "${the_dir}"
 	second=2
-	#if ((i == last_day)); then second=1; fi
+	if ((i == last_day)); then second=1; fi
 	for j in $(seq 1 "${second}"); do
 		cat <<EOF >> "part${j}.rb"
 #!/usr/bin/env ruby 
