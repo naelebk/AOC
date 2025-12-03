@@ -571,7 +571,7 @@ module Utils
   def self.time(label = "Execution")
     start = Time.now
     result = yield
-    puts "#{label}: #{Time.now - start} sec"
+    puts "#{COLOR[:yellow]}#{label}: #{COLOR[:green]}#{Time.now - start} secondes#{COLOR[:nc]}"
     result
   end
 
