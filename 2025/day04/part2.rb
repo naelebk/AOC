@@ -29,6 +29,8 @@ Utils.time {
     sum += accessible.size
   end
 
+  puts sum
+
   cookie = Utils.get_cookie
   Utils.submit_answer(YEAR, DAY, LEVEL, sum, cookie)
 }
