@@ -7,9 +7,23 @@ Utils.time {
   DAY = 4
   LEVEL = 1
 
-  input = Utils.read_lines('day4-input.txt')
-
+  grid = Utils.read_matrix('day4-input.txt')
+  height = grid.size
+  width = grid[0].size
   sum = 0
+  grid.each_with_index do |row, y|
+    row.each_with_index do |cell, x|
+      next unless cell == "@"
+      neighbors_count = Utils.neighbors8(x, y).count do |nx, ny|
+        Utils.in_bounds?(nx, ny, width, height) && grid[ny][nx] == "@"
+      end
+      sum += 1 if neighbors_count < 4
+    end
+  end
+  puts sum
+
   cookie = Utils.get_cookie
   Utils.submit_answer(YEAR, DAY, LEVEL, sum, cookie)
 }
+
+# Execution: 0.573043609 secondes
