@@ -476,6 +476,27 @@ module Utils
     nil
   end
 
+  # Recherche un nombre à partir de coordonnées x y dans un grille (grid)
+  #
+  # @param grid [Array<Array<Object>>] La grille 2D dans laquelle effectuer la recherche
+  # @param [Integer] x abscisse
+  # @param [Integer] y l'ordonnée
+  # @return [Integer] le nombre trouvée
+  def self.extract_number_from_coordinate_in_grid(grid, x, y)
+    width = grid[0].size
+    start = x
+    while start > 0 && is_digit?(grid[y][start - 1])
+      start -= 1
+    end
+    number = ""
+    i = start
+    while i < width && is_digit?(grid[y][i])
+      number << grid[y][i]
+      i += 1
+    end
+    number.to_i
+  end
+
 
   #################################
   # Divers
@@ -491,6 +512,19 @@ module Utils
   #   # => 11
   def self.binary_to_int(string)
     string.to_i(2)
+  end
+
+  # Si c'est un chiffre ou non
+  #
+  # @param [String] le caractère à tester
+  # @return [True] si ça l'est
+  # @return [False] sinon
+  #
+  # @example
+  #   Utils.is_digit("3")
+  #   # => true
+  def self.is_digit?(ch)
+    ch.match?(/\A\d\z/)
   end
 
   # Convertit un entier en binaire (avec padding optionnel).
