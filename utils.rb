@@ -482,6 +482,14 @@ module Utils
   # @param [Integer] x abscisse
   # @param [Integer] y l'ordonnée
   # @return [Integer] le nombre trouvée
+  # @example
+  #   grid = [
+  #     [1, 2, 3],
+  #     [4, 5, 6],
+  #     [7, 8, 9]
+  #   ]
+  #   Utils.extract_number_from_coordinate_in_grid(grid, 1, 1)
+  #   # => 456
   def self.extract_number_from_coordinate_in_grid(grid, x, y)
     width = grid[0].size
     start = x

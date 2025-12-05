@@ -35,8 +35,8 @@ Utils.time {
   LEVEL = ${j}
 
   input = Utils.read_lines('day${i}-input.txt')
-
   sum = 0
+
   cookie = Utils.get_cookie
   Utils.submit_answer(YEAR, DAY, LEVEL, sum, cookie)
 }
