@@ -13,19 +13,15 @@ test -d "${current_year}" && cd "${current_year}"
 first_day=1
 last_day=25
 
-for i in $(seq "${first_day}" "${last_day}"); do
-	if [ $i -lt 10 ]; then
-		the_dir="day0${i}"
-	else
-		the_dir="day${i}"
-	fi
+for i in $(seq -w "${first_day}" "${last_day}"); do
+	the_dir="day${i}"
 	mkdir "${the_dir}"
 	cd "${the_dir}"
 	second=2
 	if ((i == last_day)); then second=1; fi
 	for j in $(seq 1 "${second}"); do
 		cat <<EOF >> "part${j}.rb"
-#!/usr/bin/env ruby 
+#!/usr/bin/env ruby
 # part${j}.rb
 require_relative '../../utils.rb'
 
