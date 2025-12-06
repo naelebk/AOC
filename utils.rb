@@ -93,6 +93,30 @@ module Utils
     [left, right]
   end
 
+  # Lit un fichier avec plusieurs colonnes séparées par espaces.
+  #
+  # @param path [String] chemin du fichier
+  # @return [Array<Array<Integer>>] [colonne_1, ..., colonne_n]
+  #
+  # @example
+  #   # fichier :
+  #   #  123 328  51 64 
+  #   #   45 64  387 23 
+  #   #    6 98  215 314
+  #   Utils.read_columns("pairs.txt")
+  #   # => [[[1, 2, 3], [4, 5], [6]], [[3, 2, 8], [6, 4], [9, 8]], [[5, 1], [3, 8, 7], [2, 1, 5]], [[6, 4], [2, 3], [3, 1, 4]]]
+  def self.read_columns(path)
+    read_lines(path).map do |line|
+      line.split.map do |word|
+        if word.length != 1 || word.chars.all? { |c| c.match?(/\d/) }
+          digits(word)
+        else
+          word
+        end
+      end
+    end.transpose
+  end
+
   # Lit un fichier comme une matrice de caractères.
   #
   # @param path [String] chemin du fichier

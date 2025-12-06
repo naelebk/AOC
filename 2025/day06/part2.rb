@@ -6,18 +6,6 @@ require_relative '../../utils.rb'
 # de DROITE À GAUCHE dans chaque problème, pas de gauche à droite comme d'habitude
 # J'ai dû reconstruire tout le parsing caractère par caractère pour bien gérer ça
 
-def read_columns(path)
-  Utils.read_lines(path).map do |line|
-    line.split.map do |word|
-      if word.length != 1 || word.chars.all? { |c| c.match?(/\d/) }
-        Utils.digits(word)
-      else
-        word
-      end
-    end
-  end.transpose
-end
-
 Utils.time {
   YEAR = 2025
   DAY = 6
