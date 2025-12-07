@@ -134,6 +134,26 @@ module Utils
     read_lines(path).map(&:chars)
   end
 
+  # Cette fonction retourne la taille de la grille (hauteur, largeur)
+  #
+  # @param [Array<Array<String>>] matrice de caractères
+  # @return [Array<Integer>] un tableau contenant la hauteur (height) et la largeur (width) de la grille
+
+  # @example
+  #   # grid = [["A","B","C"], ["D","E","F"]]
+  #   # irb(main):003:0> height, width = Utils.get_size_of_grid(grid)
+  #   # => [2, 3]
+  #   # irb(main):004:0> height
+  #   # => 2
+  #   # irb(main):005:0> width
+  #   # => 3
+  def self.get_size_of_grid(grid)
+    [
+      grid.size, # height
+      grid[0].size # width
+    ]
+  end
+
   # Lit un CSV simple.
   #
   # @param path [String] chemin du fichier

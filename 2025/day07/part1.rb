@@ -8,8 +8,7 @@ Utils.time {
   LEVEL = 1
 
   grid = Utils.read_matrix("day7-input.txt")
-  height = grid.size
-  width = grid[0].size
+  height, width = Utils.get_size_of_grid(grid)
   start_x, start_y = Utils.find_in_grid("S", grid)
   beams = [[start_x, start_y]]
   splits = 0

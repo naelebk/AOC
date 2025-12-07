@@ -8,8 +8,7 @@ Utils.time {
   LEVEL = 2
 
   grid = Utils.read_matrix('day4-input.txt')
-  height = grid.size
-  width = grid[0].size
+  height, width = Utils.get_size_of_grid(grid)
   sum = 0
   loop do
     accessible = []

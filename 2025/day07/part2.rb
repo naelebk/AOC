@@ -45,8 +45,7 @@ end
 '''
 
 def count_timelines(grid, start_x, start_y)
-  height = grid.size
-  width = grid[0].size
+  height, width = Utils.get_size_of_grid(grid)
   memo = {}
   def explore(grid, x, y, height, width, visited, memo)
     return 1 if y >= height || x < 0 || x >= width
