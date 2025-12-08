@@ -111,7 +111,7 @@ module Utils
     read_lines(path).map do |line|
       line.split(sep).map do |word|
         if word.length != 1 || word.chars.all? { |c| c.match?(/\d/) }
-          digits(word)
+          word.to_i
         else
           word
         end
@@ -134,11 +134,37 @@ module Utils
     read_lines(path).map(&:chars)
   end
 
+  # Transpose une grille (inverse lignes et colonnes)
+  # Utile pour transformer des données verticales en horizontales ou vice-versa
+  #
+  # @param grid [Array<Array<Object>>] grille à transposer
+  # @return [Array<Array<Object>>] grille transposée
+  #
+  # @example
+  #   grid = [
+  #     ["A", "B", "C"],
+  #     ["D", "E", "F"]
+  #   ]
+  #   Utils.transpose_grid(grid)
+  #   # => [["A", "D"], ["B", "E"], ["C", "F"]]
+  #
+  # @example
+  #   # Utile pour lire des colonnes de nombres
+  #   numbers = [
+  #     [1, 2, 3],
+  #     [4, 5, 6]
+  #   ]
+  #   Utils.transpose_grid(numbers)
+  #   # => [[1, 4], [2, 5], [3, 6]]
+  def self.transpose_grid(grid)
+    grid.transpose
+  end
+
   # Cette fonction retourne la taille de la grille (hauteur, largeur)
   #
   # @param [Array<Array<String>>] matrice de caractères
   # @return [Array<Integer>] un tableau contenant la hauteur (height) et la largeur (width) de la grille
-
+  # 
   # @example
   #   # grid = [["A","B","C"], ["D","E","F"]]
   #   # irb(main):003:0> height, width = Utils.get_size_of_grid(grid)
@@ -153,6 +179,32 @@ module Utils
       grid[0].size # width
     ]
   end
+
+  # Clone en profondeur un objet (copie complète indépendante)
+  # Contrairement à .dup ou .clone, modifie la copie sans affecter l'original
+  # Fonctionne avec tableaux imbriqués, hash, et objets complexes
+  #
+  # @param obj [Object] objet à cloner
+  # @return [Object] copie profonde de l'objet
+  #
+  # @example
+  #   original = [[1, 2], [3, 4]]
+  #   copie = Utils.deep_clone(original)
+  #   copie[0][0] = 999
+  #   puts original.inspect  # => [[1, 2], [3, 4]] (inchangé)
+  #   puts copie.inspect     # => [[999, 2], [3, 4]]
+  #
+  # @example
+  #   # Avec des hash imbriqués
+  #   data = { a: { b: [1, 2, 3] } }
+  #   copie = Utils.deep_clone(data)
+  #   copie[:a][:b] << 4
+  #   puts data.inspect   # => {:a=>{:b=>[1, 2, 3]}} (inchangé)
+  #   puts copie.inspect  # => {:a=>{:b=>[1, 2, 3, 4]}}
+  def self.deep_clone(obj)
+    Marshal.load(Marshal.dump(obj))
+  end
+
 
   # Lit un CSV simple.
   #
@@ -607,8 +659,8 @@ module Utils
   # @example
   #   Utils.debug([1,2,3], "Array")
   #   # => "Array: [1, 2, 3]"
-  def self.debug(var, label = nil)
-    puts "#{label || 'DEBUG'}: #{var.inspect}"
+  def self.debug(var, label = "DEBUG")
+    my_puts(:cyan, "#{label} : #{var.inspect}")
   end
 
   # Flood fill sur une grille 2D.
@@ -994,7 +1046,6 @@ module Utils
   # @param html [String] le contenu HTML de la réponse du serveur
   # @return [void] affiche le message approprié selon le résultat
   def self.parse_response(html)
-    #puts html
     if html.include?("That's the right answer")
       my_puts(:green, "OK !")
     elsif html.include?("That's not the right answer")
@@ -1018,7 +1069,7 @@ module Utils
   #
   # @return [String] le cookie de session (première ligne du fichier)
   def self.get_cookie
-    File.readlines(COOKIE_PATH)[0].strip
+    read_lines(COOKIE_PATH)[0].strip
   rescue Errno::ENOENT
     raise "Fichier .cookie.txt introuvable."
   rescue => e
