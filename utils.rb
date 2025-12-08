@@ -205,6 +205,98 @@ module Utils
     Marshal.load(Marshal.dump(obj))
   end
 
+  # Itère sur toutes les combinaisons de k indices avec i₀ < i₁ < ... < iₖ₋₁
+  #
+  # Génère toutes les combinaisons de k indices distincts en ordre croissant
+  # dans l'intervalle [start, n). Généralisation de loop_two_levels à k niveaux.
+  #
+  # @param n [Integer] La limite supérieure exclusive de l'intervalle
+  # @param levels [Integer] Le nombre de niveaux d'imbrication (k indices) (défaut: 2)
+  # @param start [Integer] La limite inférieure inclusive (défaut: 0)
+  # @param step [Integer] La distance minimale entre indices consécutifs (défaut: 1)
+  # @yield [*indices] Exécute le block avec un tableau de k indices
+  # @yieldparam indices [Array<Integer>] Tableau de k indices en ordre croissant
+  # @return [void] Ne retourne rien si un block est fourni
+  # @return [Enumerator] Retourne un Enumerator si aucun block n'est fourni
+  #
+  # @example 2 niveaux (équivalent à loop_two_levels)
+  #   Utils.loop_n_levels(5, 2) do |i, j|
+  #     puts "#{i}, #{j}"
+  #   end
+  #   # Affiche: (0,1), (0,2), (0,3), (0,4), (1,2), (1,3), (1,4), (2,3), (2,4), (3,4)
+  #
+  # @example 3 niveaux (triplets)
+  #   Utils.loop_n_levels(5, 3) do |i, j, k|
+  #     puts "#{i}, #{j}, #{k}"
+  #   end
+  #   # Affiche: (0,1,2), (0,1,3), (0,1,4), (0,2,3), (0,2,4), (0,3,4),
+  #   #          (1,2,3), (1,2,4), (1,3,4), (2,3,4)
+  #
+  # @example 4 niveaux avec step = 2
+  #   Utils.loop_n_levels(10, 4, step: 2) do |i, j, k, l|
+  #     puts "#{i}, #{j}, #{k}, #{l}"
+  #   end
+  #   # Génère des quadruplets avec distance >= 2 entre chaque indice
+  #
+  # @example Calcul de distance entre triplets de points
+  #   boxes = [[0,0,0], [1,1,1], [2,2,2], [3,3,3], [4,4,4]]
+  #   Utils.loop_n_levels(boxes.length, 3) do |i, j, k|
+  #     # Calcul sur les 3 points boxes[i], boxes[j], boxes[k]
+  #     area = calculate_triangle_area(boxes[i], boxes[j], boxes[k])
+  #     puts "Triangle #{i}-#{j}-#{k}: aire = #{area}"
+  #   end
+  #
+  # @example Utilisation sans block
+  #   triplets = Utils.loop_n_levels(5, 3).to_a
+  #   # => [[0,1,2], [0,1,3], [0,1,4], [0,2,3], [0,2,4], [0,3,4],
+  #   #     [1,2,3], [1,2,4], [1,3,4], [2,3,4]]
+  #
+  # @example 1 niveau (cas dégénéré, simple boucle)
+  #   Utils.loop_n_levels(5, 1) do |i|
+  #     puts i
+  #   end
+  #   # Affiche: 0, 1, 2, 3, 4
+  #
+  # @note Génère C(n,k) = n!/(k!(n-k)!) combinaisons pour step=1
+  # @note La complexité augmente exponentiellement avec levels
+  # @raise [ArgumentError] si levels < 1
+  # @raise [ArgumentError] si step < 1
+  # @raise [ArgumentError] si n < start + (levels-1)*step (impossible)
+  def self.loop_n_levels(n, levels: 2, start: 0, step: 1)
+    raise ArgumentError, "Au moins 1 niveau est requis !" if levels < 1
+    raise ArgumentError, "step >= 1 !!!" if step < 1
+    raise ArgumentError, "start < n !!!" if start >= n
+    min_n = start + (levels - 1) * step
+    raise ArgumentError, "n must be at least #{min_n} for #{levels} levels with step #{step}" if n <= min_n
+    return enum_for(:loop_n_levels, n, levels: levels, start: start, step: step) unless block_given?
+
+    buffer = Array.new(levels)
+    generate_combinations_fast(n, levels, start, step, buffer, 0) do |indices|
+      yield(*indices)
+    end
+  end
+  
+  # Génère récursivement les combinaisons
+  # @param n [Integer] Limite supérieure
+  # @param remaining [Integer] Nombre de niveaux restants
+  # @param current_start [Integer] Début pour le niveau actuel
+  # @param step [Integer] Distance minimale
+  # @param buffer [Array<Integer>] Indices accumulés
+  # @param depth [Integer] La profondeur à laquelle on doit itérer (basiquement 0)
+  # @yield [Array<Integer>] Combinaison complète
+  def self.generate_combinations_fast(n, remaining, current_start, step, buffer, depth, &block)
+    if remaining == 0
+      yield buffer
+      return
+    end
+    max_i = n - (remaining - 1) * step
+    i = current_start
+    while i < max_i
+      buffer[depth] = i
+      generate_combinations_fast(n, remaining - 1, i + step, step, buffer, depth + 1, &block)
+      i += 1
+    end
+  end
 
   # Lit un CSV simple.
   #
@@ -905,13 +997,11 @@ module Utils
     distances = Hash.new(Float::INFINITY)
     distances[start] = 0
     previous = {}
-    visited = Set.new
-    queue = [[0, start]]
-    
+    queue = PQueue.new { |a, b| a[0] < b[0] }
+    queue.push([0, start])
     until queue.empty?
-      dist, node = queue.min_by(&:first)
-      queue.delete([dist, node])
-      
+      dist, node = queue.pop
+      next if dist > distances[node]
       if node == goal
         path = []
         current = goal
@@ -921,20 +1011,15 @@ module Utils
         end
         return [dist, path]
       end
-      
-      next if visited.include?(node)
-      visited << node
-      
       graph[node].each do |neighbor, weight|
         new_dist = dist + weight
         if new_dist < distances[neighbor]
           distances[neighbor] = new_dist
           previous[neighbor] = node
-          queue << [new_dist, neighbor]
+          queue.push([new_dist, neighbor])
         end
       end
     end
-    
     nil
   end
 
@@ -1001,6 +1086,53 @@ module Utils
     nil
   end
 
+  # Trouve le chemin le plus court entre +start+ et +goal+ en utilisant l'algorithme A*
+  #
+  # @param graph [Hash<String, Hash<String, Numeric>>] Graphe pondéré
+  # @param start [String] Noeud de départ
+  # @param goal [String] Noeud d'arrivée
+  # @param heuristic [Proc] Fonction heuristique h(node, goal) -> Numeric
+  # @return [Array(Numeric, Array<String>), nil] Distance totale et chemin, ou nil si pas de chemin
+  #
+  # @example
+  #   graph = Utils.empty_weighted_graph
+  #   graph["A"]["B"] = 4
+  #   graph["A"]["C"] = 2
+  #   h = ->(node, goal) { 0 } # Dijkstra si heuristique nulle
+  #   dist, path = Utils.astar_path(graph, "A", "B", h)
+  def self.astar_path(graph, start, goal, heuristic)
+    distances = Hash.new(Float::INFINITY)
+    distances[start] = 0
+    previous = {}
+    visited = Set.new
+    queue = PQueue.new { |a, b| a[0] < b[0] }
+    queue.push([heuristic.call(start, goal), start])
+    until queue.empty?
+      f, node = queue.pop
+      g = distances[node]
+      if node == goal
+        path = []
+        current = goal
+        while current
+          path.unshift(current)
+          current = previous[current]
+        end
+        return [g, path]
+      end
+      next if visited.include?(node)
+      visited << node
+      graph[node].each do |neighbor, weight|
+        new_g = g + weight
+        if new_g < distances[neighbor]
+          distances[neighbor] = new_g
+          previous[neighbor] = node
+          queue.push([new_g + heuristic.call(neighbor, goal), neighbor])
+        end
+      end
+    end
+    nil
+  end
+
   # FONCTIONS SPÉCIFIQUES À L'ADVENT OF CODE
 
 
@@ -1028,7 +1160,7 @@ module Utils
     uri = URI("https://adventofcode.com/#{year}/day/#{day}/answer")
     http = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl = true
-    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+    http.verify_mode = OpenSSL::SSL::VERIFY_PEER
     request = Net::HTTP::Post.new(uri)
     request['Cookie'] = "session=#{session_cookie}"
     request['User-Agent'] = "ruby-script by Nael"

@@ -10,12 +10,12 @@ Utils.time {
   boxes = Utils.read_csv('day8-input.txt').map { |element| element.map!(&:to_i) }
   n = boxes.size
   dists = []
-  (0...n).each { |i|
-    (i+1...n).each { |j|
-      dist = (boxes[i][0]-boxes[j][0])**2 + (boxes[i][1]-boxes[j][1])**2 + (boxes[i][2]-boxes[j][2])**2
-      dists << [dist, i, j]
-    }
-  }
+
+  Utils.loop_n_levels(n) do |i, j|
+    dist = (boxes[i][0]-boxes[j][0])**2 + (boxes[i][1]-boxes[j][1])**2 + (boxes[i][2]-boxes[j][2])**2
+    dists << [dist, i, j]
+  end
+  
   dists.sort!
   parent = (0...n).to_a
   size = [1] * n
