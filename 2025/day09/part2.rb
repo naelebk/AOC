@@ -3,7 +3,7 @@
 require_relative '../../utils.rb'
 
 =begin
-J'ai énormément galéré, voici le code que j'avais initialement qui faisait explosé la file.
+J'ai énormément galéré, de base mon code utilisait une file et un algo BFS, mais la file explosait !
 En fait, plus optimisé, je vérifie directement si un rectangle croise le périmètre et on passe d'une
 complexité en O(n^2) à O(k * n) !
 =end
@@ -44,17 +44,15 @@ Utils.time {
   input = Utils.read_csv('day9-input.txt').map { |e| e.map!(&:to_i) }
   boxes = []
   n = input.size  
-  n.times do |i|
-    ((i+1)...n).each do |j|
-      x1, y1 = input[i]
-      x2, y2 = input[j]
-      min_x = [x1, x2].min
-      max_x = [x1, x2].max
-      min_y = [y1, y2].min
-      max_y = [y1, y2].max
-      area = (max_x - min_x + 1) * (max_y - min_y + 1)
-      boxes << [area, min_x, min_y, max_x, max_y]
-    end
+  Utils.loop_n_levels(n) do |i, j|
+    x1, y1 = input[i]
+    x2, y2 = input[j]
+    min_x = [x1, x2].min
+    max_x = [x1, x2].max
+    min_y = [y1, y2].min
+    max_y = [y1, y2].max
+    area = (max_x - min_x + 1) * (max_y - min_y + 1)
+    boxes << [area, min_x, min_y, max_x, max_y]
   end
   boxes.sort_by! { |area, *_| -area }
   boxes.each_with_index do |(area, min_x, min_y, max_x, max_y), idx|  
@@ -67,4 +65,4 @@ Utils.time {
   end
 }
 
-# Execution: 1.582652823 secondes
+# Execution: 1.381598526 secondes
