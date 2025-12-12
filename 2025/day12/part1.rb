@@ -97,3 +97,4 @@ Utils.time {
 }
 
 # Execution: 113.852552914 secondes
+# Le pire c'est que ça marche en moins de 2 minutes PTDRRRRR
