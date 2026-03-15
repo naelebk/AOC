@@ -402,6 +402,18 @@ module Utils
     array.tally
   end
 
+  # Fonction inverse de tally
+  #
+  # @param [Hash{Object => Integer}]
+  # @return array [Array]
+  #
+  # @example
+  #   Utils.untally({"A"=>4, "B" => 2, "I"=>1, "J" => 1})
+  #   # => ["A", "A", "A", "A", "B", "B", "I", "J"]
+  def self.untally(hash)
+    hash.flat_map { |index, count| [index] * count }
+  end
+
   # Nombre d’éléments distincts.
   #
   # @param array [Array]
