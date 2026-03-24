@@ -205,6 +205,63 @@ module Utils
     Marshal.load(Marshal.dump(obj))
   end
 
+  # Duplique les lignes spécifiées dans une grille (insère une copie juste en dessous).
+  # Utile par exemple pour "expandre" une grille où certaines lignes sont vides.
+  #
+  # @param grid [Array<Array<Object>>] la grille à modifier
+  # @param row_indices [Array<Integer>] indices (0-based) des lignes à dupliquer
+  # @return [Array<Array<Object>>] nouvelle grille avec les lignes dupliquées
+  #
+  # @example
+  #   grid = [
+  #     ["a", "b"],
+  #     [".", "."],
+  #     ["c", "d"]
+  #   ]
+  #   Utils.expand_rows(grid, [1])
+  #   # => [["a","b"], [".","."], [".","."],[" c","d"]]
+  #
+  # @example Plusieurs lignes à dupliquer
+  #   Utils.expand_rows(grid, [0, 2])
+  #   # => [["a","b"],["a","b"], [".","."], ["c","d"],["c","d"]]
+  def self.expand_rows(grid, row_indices)
+    result = []
+    grid.each_with_index do |row, i|
+      result << row
+      result << row.dup if row_indices.include?(i)
+    end
+    result
+  end
+
+  # Duplique les colonnes spécifiées dans une grille (insère une copie juste à droite).
+  # Utile par exemple pour "expandre" une grille où certaines colonnes sont vides.
+  #
+  # @param grid [Array<Array<Object>>] la grille à modifier
+  # @param col_indices [Array<Integer>] indices (0-based) des colonnes à dupliquer
+  # @return [Array<Array<Object>>] nouvelle grille avec les colonnes dupliquées
+  #
+  # @example
+  #   grid = [
+  #     ["a", ".", "b"],
+  #     ["c", ".", "d"]
+  #   ]
+  #   Utils.expand_cols(grid, [1])
+  #   # => [["a",".",".","b"], ["c",".",".","d"]]
+  #
+  # @example Plusieurs colonnes à dupliquer
+  #   Utils.expand_cols(grid, [0, 2])
+  #   # => [["a","a",".","b","b"], ["c","c",".","d","d"]]
+  def self.expand_cols(grid, col_indices)
+    grid.map do |row|
+      new_row = []
+      row.each_with_index do |cell, j|
+        new_row << cell
+        new_row << cell if col_indices.include?(j)
+      end
+      new_row
+    end
+  end
+
   # Itère sur toutes les combinaisons de k indices avec i₀ < i₁ < ... < iₖ₋₁
   #
   # Génère toutes les combinaisons de k indices distincts en ordre croissant
@@ -673,7 +730,7 @@ module Utils
   def self.find_in_grid(value, grid)
     grid.each_with_index do |row, y|
       x = row.index(value)
-      return [x, y] if x
+      return [y, x] if x
     end
     nil
   end
@@ -1032,6 +1089,80 @@ module Utils
         end
       end
     end
+    nil
+  end
+
+  # Trouve le chemin minimal entre deux points dans une grille 2D (BFS).
+  # Les cases praticables sont celles dont le caractère est différent de +wall+.
+  # Retourne le nombre de pas et la liste des positions traversées.
+  #
+  # @param grid   [Array<Array<String>>] grille de caractères
+  # @param start  [Array(Integer,Integer)] position de départ [row, col]
+  # @param goal   [Array(Integer,Integer)] position d'arrivée [row, col]
+  # @param wall   [String] caractère considéré comme un mur (par défaut "#")
+  # @param diagonal [Boolean] autorise les déplacements en diagonale (par défaut false)
+  # @return [Array(Integer, Array<Array(Integer,Integer)>), nil]
+  #   [nombre_de_pas, chemin] ou nil si aucun chemin n'existe
+  #
+  # @example Sans diagonale (4-directionnelle)
+  #   grid = [
+  #     [".", ".", ".", "#"],
+  #     ["#", ".", "#", "."],
+  #     [".", ".", ".", "."]
+  #   ]
+  #   Utils.bfs_grid_path(grid, [0, 0], [2, 3])
+  #   # => [5, [[0,0],[0,1],[1,1],[2,1],[2,2],[2,3]]]
+  #
+  # @example Avec diagonale (8-directionnelle)
+  #   Utils.bfs_grid_path(grid, [0, 0], [2, 3], diagonal: true)
+  #   # => [3, [[0,0],[1,1],[2,2],[2,3]]]
+  #
+  # @example Point de départ == arrivée
+  #   Utils.bfs_grid_path(grid, [0, 0], [0, 0])
+  #   # => [0, [[0,0]]]
+  #
+  # @example Chemin impossible (arrivée bloquée)
+  #   Utils.bfs_grid_path(grid, [0, 0], [0, 3])
+  #   # => nil
+  def self.bfs_grid_path(grid, start, goal, wall: "#", diagonal: false)
+    return [0, [start]] if start == goal
+
+    height = grid.size
+    width  = grid[0].size
+
+    dirs = diagonal ? Utils.neighbors8(0,0) : Utils.neighbors4(0,0)
+
+    visited  = {}
+    previous = {}
+    queue    = [start]
+    visited[start] = true
+
+    until queue.empty?
+      row, col = queue.shift
+
+      dirs.each do |dr, dc|
+        nr, nc = row + dr, col + dc
+        next if nr < 0 || nr >= height || nc < 0 || nc >= width
+        next if grid[nr][nc] == wall
+        next if visited[[nr, nc]]
+
+        visited[[nr, nc]] = true
+        previous[[nr, nc]] = [row, col]
+
+        if [nr, nc] == goal
+          path = []
+          cur  = goal
+          while cur
+            path.unshift(cur)
+            cur = previous[cur]
+          end
+          return [path.size - 1, path]
+        end
+
+        queue << [nr, nc]
+      end
+    end
+
     nil
   end
 
