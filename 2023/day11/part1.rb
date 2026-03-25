@@ -9,9 +9,9 @@ def lines_and_columns_with_no_galaxies(grid)
   (1..height).each { |h| lines[h] = false }
   (1..width).each { |w| columns[w] = false }
 
-  grid.each_with_index do |line, i|
-    line.each_with_index do |element, j|
-      if element == '#'
+  grid.each_with_index do |row, i|
+    row.each_with_index do |cel, j|
+      if cel == '#'
         columns[j+1] = true
         lines[i+1] = true
       end
