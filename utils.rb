@@ -696,6 +696,38 @@ module Utils
     x >= 0 && y >= 0 && x < width && y < height
   end
 
+  # Parcourt les voisins d'une case (i, j) dans une grille et yield chaque voisin valide.
+  # Utilise neighbors4 (4 directions) ou neighbors8 (8 directions + diagonales).
+  #
+  # @param grid   [Array<Array<Object>>] la grille
+  # @param i      [Integer] ligne courante
+  # @param j      [Integer] colonne courante
+  # @param diagonal [Boolean] autorise les diagonales (défaut: false)
+  # @yield [ni, nj, cell] coordonnées et valeur de chaque voisin valide
+  # @yieldparam ni   [Integer] ligne du voisin
+  # @yieldparam nj   [Integer] colonne du voisin
+  # @yieldparam cell [Object]  valeur dans la grille à (ni, nj)
+  # @return [Enumerator] si aucun bloc fourni
+  #
+  # @example Sans diagonale
+  #   Utils.each_neighbor(grid, 1, 1) { |ni, nj, cell| puts "#{ni},#{nj} => #{cell}" }
+  #
+  # @example Avec diagonale
+  #   Utils.each_neighbor(grid, 1, 1, diagonal: true) { |ni, nj, cell| ... }
+  #
+  # @example Sans bloc (enumerator)
+  #   Utils.each_neighbor(grid, 0, 0).map { |ni, nj, _| [ni, nj] }
+  def self.each_neighbor(grid, i, j, diagonal: false)
+    return enum_for(:each_neighbor, grid, i, j, diagonal: diagonal) unless block_given?
+    height, width = get_size_of_grid(grid)
+    deltas = diagonal ? neighbors8(0, 0) : neighbors4(0, 0)
+    deltas.each do |di, dj|
+      ni, nj = i + di, j + dj
+      next unless in_bounds?(ni, nj, width, height)
+      yield ni, nj, grid[ni][nj]
+    end
+  end
+
   # Affiche joliment une grille.
   #
   # @param grid [Array<Array<String>>]
