@@ -874,21 +874,17 @@ module Utils
   def self.flood_fill(grid, start, passable: ->(cell) { cell != "#" })
     visited = Set.new
     to_visit = [start]
-    width  = grid[0].size
-    height = grid.size
-
+    height, width = get_size_of_grid(grid)
     until to_visit.empty?
       x, y = to_visit.pop
       next unless in_bounds?(x, y, width, height)
       next if visited.include?([x, y])
       next unless passable.call(grid[y][x])
-
       visited << [x, y]
       neighbors4(x, y).each do |nx, ny|
         to_visit << [nx, ny] unless visited.include?([nx, ny])
       end
     end
-
     visited
   end
 
