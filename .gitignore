@@ -1,0 +1,7 @@
+.cookie.txt
+.cookie.txt.bak
+**/day[0-9]-input.txt
+**/day[0-9][0-9]-input.txt
+.methods.txt
+**/Makefile
+Makefile
