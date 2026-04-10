@@ -11,7 +11,7 @@ fi
 mkdir "${current_year}"
 test -d "${current_year}" && cd "${current_year}"
 first_day=1
-last_day=25
+last_day=12
 
 for i in $(seq -w "${first_day}" "${last_day}"); do
 	the_dir="day${i}"
@@ -39,6 +39,21 @@ Utils.time {
 EOF
 		chmod 755 "part${j}.rb"
 	done
+	cat <<EOF >> Makefile
+COOKIE = \$(shell cat ../../.cookie.txt)
+YEAR = ${current_year}
+DAY = ${i}
+
+.PHONY: input
+
+input:
+	@curl -s "https://adventofcode.com/\$(YEAR)/day/\$(DAY)/input" \
+		-H "Cookie: session=\$(COOKIE)" \
+		-H "User-Agent: bash-script by Nael" \
+		-o "day\$(DAY)-input.txt" && \
+	echo "Input day\$(DAY) récupéré" || \
+	echo "Erreur day\$(DAY)"
+EOF
 	touch README.txt
 	touch "day${i}-sample-input.txt"
 	touch "day${i}-input.txt"

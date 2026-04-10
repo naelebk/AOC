@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby 
+#!/usr/bin/env ruby
 # part1.rb
 require_relative '../../utils.rb'
 
@@ -8,8 +8,8 @@ Utils.time {
   LEVEL = 1
 
   input = Utils.read_lines('day20-input.txt')
-
   sum = 0
+
   cookie = Utils.get_cookie
   Utils.submit_answer(YEAR, DAY, LEVEL, sum, cookie)
 }
