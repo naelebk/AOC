@@ -53,6 +53,12 @@ input:
 		-o "day\$(DAY)-input.txt" && \
 	echo "Input day\$(DAY) récupéré" || \
 	echo "Erreur day\$(DAY)"
+
+first:
+	ruby part1.rb
+
+second:
+	ruby part2.rb
 EOF
 	touch README.txt
 	touch "day${i}-sample-input.txt"

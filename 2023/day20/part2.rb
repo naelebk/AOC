@@ -7,7 +7,9 @@ Utils.time {
   DAY = 20
   LEVEL = 2
 
-  input = Utils.read_lines('day20-input.txt')
+  input = Utils.read_lines('day20-input.txt').map do |el|
+    el.split("->").map(&:strip)
+  end
   sum = 0
 
   cookie = Utils.get_cookie
