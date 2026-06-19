@@ -9,83 +9,54 @@ Utils.time {
 
   modules = {}
   input = Utils.read_lines("day20-input.txt")
-  input.each do
-    name, output = _1.split("->").map(&:strip)
-    output = output.split(",").map(&:strip)
-
-    if name != "broadcaster"
-      type = name[0]
-      name = name[1..]
-    end
-
-    case type
-    when ?%
-      memory = false
-    when ?&
-      memory = {}
-    end
-
-    modules[name] = [type, memory, output]
+  input.each do |line|
+    name, out = line.split("->").map(&:strip)
+    out = out.split(",").map(&:strip)
+    type = name == "broadcaster" ? nil : name[0]
+    name = name[1..] if type
+    modules[name] = [type, nil, out]
   end
-
-  modules.each do |n, (_type, _memory, out)|
-    out.each do |n1|
-      type1, memory1, _ = modules[n1]
-
-      memory1[n] = :l if type1 == ?&
+  # init mémoire des conjonctions
+  modules.each do |n, (_t, _m, out)|
+    out.each do |dst|
+      t = modules[dst]&.first
+      if t == ?&
+        modules[dst][1] ||= {}
+        modules[dst][1][n] = :l
+      end
     end
   end
+  # flip-flops à false
+  modules.each { |_n, m| m[1] = false if m[0] == ?% }
 
-  hc = 0
-  lc = 0
-  queue = []
-
-  1000.times do |i|
-    lc += 1
-
-    modules["broadcaster"].last.each do |to|
-      queue << ["broadcaster", to, :l]
-      lc += 1
-    end
-
-    while queue.any?
+  lc = hc = 0
+  1000.times do
+    queue = [["button", "broadcaster", :l]]
+    until queue.empty?
       from, to, sig = queue.shift
-
+      sig == :l ? lc += 1 : hc += 1 # compte à la réception
       type, memory, out = modules[to]
-
-      next if type.nil?
-
-      case type
-      when ?%
-        next if sig == :h
-
-        out_sig = memory ? :l : :h
-
-        modules[to][1] = !memory
-      when ?&
-        memory[from] = sig
-
-        if memory.values.all? { _1 == :h }
-          out_sig = :l
-        else
-          out_sig = :h
+      next if type.nil? && to != "broadcaster" # puits (output, rx, ...)
+      out_sig =
+        case type
+        when nil # broadcaster
+          sig
+        when ?%
+          next if sig == :h
+          modules[to][1] = !memory
+          modules[to][1] ? :h : :l
+        when ?&
+          memory[from] = sig
+          memory.values.all? { _1 == :h } ? :l : :h
         end
-      end
-
-      if out_sig == :l
-        lc += out.count
-      else
-        hc += out.count
-      end
-
-      out.each do
-        queue << [to, _1, out_sig]
-      end
+      out.each { queue << [to, _1, out_sig] }
     end
   end
 
-  pp hc * lc
+  sum = hc * lc
+  puts sum
 
-  #cookie = Utils.get_cookie
-  #Utils.submit_answer(YEAR, DAY, LEVEL, sum, cookie)
+  cookie = Utils.get_cookie
+  Utils.submit_answer(YEAR, DAY, LEVEL, sum, cookie)
 }
+# Execution: 0.424003075 secondes
