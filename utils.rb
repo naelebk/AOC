@@ -981,6 +981,75 @@ module Utils
     graph
   end
 
+  # Convertit une matrice (numérique ou de caractères) en graphe, pondéré ou non.
+  # Contrairement à grid_to_graph, la notion de "mur" passe par passable (pas
+  # figée sur "#"), et on peut en plus forcer des arêtes à sens unique via
+  # directions (utile pour des pentes/slopes qui n'autorisent qu'une sortie).
+  #
+  # @param matrix [Array<Array<Object>>] la matrice
+  # @param diagonal [Boolean] autorise les diagonales si directions n'est pas fourni (défaut: false)
+  # @param passable [Proc] condition cell -> Boolean pour qu'une case soit un nœud (défaut: toujours vrai)
+  # @param directions [Proc, nil] fonction cell -> liste de deltas [dx,dy] autorisés en sortie
+  #   de cette case. Si nil, utilise neighbors4/neighbors8 (donc arêtes dans les 2 sens).
+  #   Sert typiquement à modéliser des pentes à sens unique (ex: "v" => [[0,1]]).
+  # @param weight [Proc, nil] fonction cell -> poids numérique. Si nil, le graphe
+  #   est non pondéré (Set de voisins). Si fourni, le poids d'une arête est le
+  #   poids de la cellule d'arrivée (comme pour une grille de risque).
+  # @return [Hash] graphe non pondéré {[x,y] => Set<[x,y]>}, ou pondéré
+  #   {[x,y] => Hash{[x,y] => Numeric}} si weight est fourni
+  #
+  # @example Graphe non pondéré (juste la structure, pour un BFS)
+  #   matrix = [
+  #     [1, 2],
+  #     [3, 4]
+  #   ]
+  #   Utils.matrix_to_graph(matrix)
+  #   # => {[0,0]=>#<Set: {[1,0],[0,1]}>, [1,0]=>#<Set: {[0,0],[1,1]}>, ...}
+  #
+  # @example Graphe pondéré (poids d'une arête = valeur de la case d'arrivée)
+  #   matrix = [
+  #     [1, 9],
+  #     [1, 1]
+  #   ]
+  #   graph = Utils.matrix_to_graph(matrix, weight: ->(cell) { cell })
+  #   Utils.dijkstra(graph, [0, 0], [1, 1])
+  #   # => 3 (chemin : [0,0] -> [0,1] -> [1,1], coûts 1 + 1)
+  #
+  # @example Murs + pentes à sens unique (type AoC 2023 jour 23)
+  #   slope = {
+  #     ">" => [[1, 0]],
+  #     "<" => [[-1, 0]],
+  #     "v" => [[0, 1]],
+  #     "^" => [[0, -1]]
+  #   }
+  #   graph = Utils.matrix_to_graph(
+  #     matrix,
+  #     passable: ->(cell) { cell != "#" },
+  #     directions: ->(cell) { slope[cell] || Utils.neighbors4(0, 0) }
+  #   )
+  def self.matrix_to_graph(matrix, diagonal: false, passable: ->(cell) { true }, directions: nil, weight: nil)
+    graph = weight ? empty_weighted_graph : empty_graph
+    height, width = get_size_of_grid(matrix)
+    matrix.each_with_index do |row, y|
+      row.each_with_index do |cell, x|
+        next unless passable.call(cell)
+        deltas = directions ? directions.call(cell) : (diagonal ? neighbors8(0, 0) : neighbors4(0, 0))
+        deltas.each do |dx, dy|
+          nx, ny = x + dx, y + dy
+          next unless in_bounds?(nx, ny, width, height)
+          ncell = matrix[ny][nx]
+          next unless passable.call(ncell)
+          if weight
+            graph[[x, y]][[nx, ny]] = weight.call(ncell)
+          else
+            graph[[x, y]] << [nx, ny]
+          end
+        end
+      end
+    end
+    graph
+  end
+
   # Parse une liste d'arêtes depuis un fichier.
   # Format attendu : "nœud1-nœud2" ou avec séparateur personnalisé.
   # Crée un graphe non-dirigé par défaut (arête bidirectionnelle).
@@ -1153,16 +1222,15 @@ module Utils
   #   Utils.bfs_grid_path(grid, [0, 0], [0, 3])
   #   # => nil
   def self.bfs_grid_path(grid, start, goal, wall: "#", diagonal: false)
+    start = start.split(",").map(&:to_i) if start.is_a?(String)
+    goal  = goal.split(",").map(&:to_i)  if goal.is_a?(String)
     return [0, [start]] if start == goal
-
-    height = grid.size
-    width  = grid[0].size
-
+    height, width = get_size_of_grid(grid)
     dirs = diagonal ? Utils.neighbors8(0,0) : Utils.neighbors4(0,0)
 
     visited  = {}
     previous = {}
-    queue    = [start]
+    queue = [start]
     visited[start] = true
 
     until queue.empty?
@@ -1304,6 +1372,121 @@ module Utils
     nil
   end
 
+  # Trouve le chemin le plus long entre start et goal, sans repasser deux fois
+  # par la même case (DFS avec backtracking). Contrairement à dijkstra/astar
+  # qui cherchent le plus court chemin, cette fonction explore tous les chemins
+  # simples possibles, donc à réserver aux petits graphes (quelques centaines
+  # de nœuds). Pour un gros graphe (grille de type AoC), compresse-le d'abord
+  # avec compress_graph pour ne garder que les intersections.
+  #
+  # @param graph [Hash{Object => Set<Object>}] graphe non pondéré,
+  #   ou [Hash{Object => Hash{Object => Numeric}}] graphe pondéré
+  # @param start [Object] nœud de départ
+  # @param goal [Object] nœud d'arrivée
+  # @return [Numeric, nil] longueur du plus long chemin, ou nil si aucun chemin
+  #
+  # @example Graphe non pondéré (longueur = nombre de pas)
+  #   graph = Utils.empty_graph
+  #   graph["A"] << "B" << "C"
+  #   graph["B"] << "D"
+  #   graph["C"] << "D"
+  #   Utils.longest_path(graph, "A", "D")
+  #   # => 2
+  #
+  # @example Graphe pondéré (longueur = somme des poids)
+  #   graph = Utils.empty_weighted_graph
+  #   graph["A"]["B"] = 5
+  #   graph["A"]["C"] = 2
+  #   graph["B"]["D"] = 3
+  #   graph["C"]["D"] = 9
+  #   Utils.longest_path(graph, "A", "D")
+  #   # => 11 (A -> C -> D)
+  # Note perf : en interne, les nœuds sont réindexés en entiers et les
+  # visités suivis via un masque de bits (Integer) plutôt qu'un Set.
+  # Sur un graphe compressé (quelques dizaines de nœuds), c'est nettement
+  # plus rapide qu'un Set de coordonnées, sans rien changer à l'appel.
+  def self.longest_path(graph, start, goal)
+    nodes = graph.keys
+    nodes << start unless nodes.include?(start)
+    nodes << goal unless nodes.include?(goal)
+    index_of = {}
+    nodes.each_with_index { |node, i| index_of[node] = i }
+
+    adjacency = Array.new(nodes.size) { [] }
+    graph.each do |node, neighbors|
+      i = index_of[node]
+      if neighbors.is_a?(Hash)
+        neighbors.each { |neighbor, w| adjacency[i] << [index_of[neighbor], w] }
+      else
+        neighbors.each { |neighbor| adjacency[i] << [index_of[neighbor], 1] }
+      end
+    end
+
+    start_idx = index_of[start]
+    goal_idx = index_of[goal]
+    longest_path_walk(adjacency, start_idx, goal_idx, 1 << start_idx, 0)
+  end
+
+  # Méthode interne de longest_path : DFS avec masque de bits sur un graphe
+  # déjà réindexé en entiers (adjacency[i] = [[voisin, poids], ...]).
+  #
+  # @param adjacency [Array<Array<Array(Integer, Numeric)>>] liste d'adjacence indexée
+  # @param node [Integer] nœud courant
+  # @param goal [Integer] nœud d'arrivée
+  # @param visited [Integer] masque de bits des nœuds déjà visités
+  # @param dist [Numeric] distance accumulée jusqu'à node
+  # @return [Numeric, nil] meilleure distance trouvée à partir d'ici, ou nil
+  def self.longest_path_walk(adjacency, node, goal, visited, dist)
+    return dist if node == goal
+    best = nil
+    adjacency[node].each do |neighbor, w|
+      bit = 1 << neighbor
+      next if visited & bit != 0
+      result = longest_path_walk(adjacency, neighbor, goal, visited | bit, dist + w)
+      next if result.nil?
+      best = result if best.nil? || result > best
+    end
+    best
+  end
+
+  # Compresse un graphe non pondéré en ne gardant que les nœuds "intéressants"
+  # (les nœuds passés dans keep, plus tous ceux qui ont 3 voisins ou plus, donc
+  # les intersections). Les couloirs entre deux intersections deviennent une
+  # seule arête pondérée par sa longueur. Indispensable avant un longest_path
+  # sur une grille type AoC (des milliers de nœuds -> quelques dizaines).
+  #
+  # @param graph [Hash{Object => Set<Object>}] graphe non pondéré (issu par ex. de matrix_to_graph)
+  # @param keep [Array<Object>] nœuds à garder en plus des intersections (ex: start et goal)
+  # @return [Hash{Object => Hash{Object => Integer}}] graphe pondéré compressé
+  #
+  # @example
+  #   graph = Utils.matrix_to_graph(matrix, passable: ->(c) { c != "#" })
+  #   compressed = Utils.compress_graph(graph, keep: [depart, arrivee])
+  #   Utils.longest_path(compressed, depart, arrivee)
+  def self.compress_graph(graph, keep: [])
+    junctions = graph.keys.select { |node| graph[node].size >= 3 } | keep
+    junctions_set = Set.new(junctions)
+    compressed = empty_weighted_graph
+
+    junctions.each do |start_node|
+      graph[start_node].each do |first_step|
+        prev = start_node
+        current = first_step
+        dist = 1
+        until junctions_set.include?(current)
+          next_step = graph[current].find { |n| n != prev }
+          break if next_step.nil?
+          prev = current
+          current = next_step
+          dist += 1
+        end
+        compressed[start_node][current] = dist if junctions_set.include?(current)
+      end
+    end
+
+    compressed
+  end
+
   # FONCTIONS SPÉCIFIQUES À L'ADVENT OF CODE
 
 
@@ -1335,10 +1518,7 @@ module Utils
     request = Net::HTTP::Post.new(uri)
     request['Cookie'] = "session=#{session_cookie}"
     request['User-Agent'] = "ruby-script by Nael"
-    request.set_form_data({
-      'level' => level,
-      'answer' => answer
-    })
+    request.set_form_data({level:, answer:}) # (comme un compact en php pour array)
     response = http.request(request)
     my_puts(:green, "HTTP #{response.code}")
     parse_response(response.body)
