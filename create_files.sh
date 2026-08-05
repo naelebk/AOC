@@ -10,15 +10,22 @@ else
 fi
 mkdir "${current_year}"
 test -d "${current_year}" && cd "${current_year}"
-first_day=1
+first_day=6
 last_day=25
 
-for i in $(seq -w "${first_day}" "${last_day}"); do
+for i in $(seq "${first_day}" "${last_day}"); do
 	the_dir="day${i}"
+	# Problème à cause du Makefile qui ne récupère plus l'input
+	# On retire le -w de la commande seq et on fait à la main
+	if ((i < 10)); then
+		the_dir="day0${i}"
+	fi
 	mkdir "${the_dir}"
 	cd "${the_dir}"
 	second=2
-	if [[ "$i" == "${last_day}" ]]; then second=1; fi
+	if ((i == last_day)); then
+		second=1
+	fi
 	for j in $(seq 1 "${second}"); do
 		cat <<EOF >> "part${j}.rb"
 #!/usr/bin/env ruby
@@ -47,12 +54,7 @@ DAY = ${i}
 .PHONY: input
 
 input:
-	@curl -s "https://adventofcode.com/\$(YEAR)/day/\$(DAY)/input" \
-		-H "Cookie: session=\$(COOKIE)" \
-		-H "User-Agent: bash-script by Nael" \
-		-o "day\$(DAY)-input.txt" && \
-	echo "Input day\$(DAY) récupéré" || \
-	echo "Erreur day\$(DAY)"
+	@curl -s "https://adventofcode.com/\$(YEAR)/day/\$(DAY)/input" -H "Cookie: session=\$(COOKIE)" -H "User-Agent: bash-script by Nael" -o "day\$(DAY)-input.txt" && echo "Input day\$(DAY) récupéré" || echo "Erreur day\$(DAY)"
 
 first:
 	ruby part1.rb
