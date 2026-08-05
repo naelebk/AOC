@@ -4,10 +4,10 @@ require_relative '../../utils.rb'
 
 Utils.time {
   YEAR = 2024
-  DAY = 6
+  DAY = 06
   LEVEL = 2
 
-  input = Utils.read_lines('day6-input.txt')
+  input = Utils.read_lines('day06-input.txt')
   sum = 0
 
   cookie = Utils.get_cookie

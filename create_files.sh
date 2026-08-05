@@ -15,10 +15,12 @@ last_day=25
 
 for i in $(seq "${first_day}" "${last_day}"); do
 	the_dir="day${i}"
+	the_day="${i}"
 	# Problème à cause du Makefile qui ne récupère plus l'input
 	# On retire le -w de la commande seq et on fait à la main
 	if ((i < 10)); then
 		the_dir="day0${i}"
+		the_day="0${i}"
 	fi
 	mkdir "${the_dir}"
 	cd "${the_dir}"
@@ -34,10 +36,10 @@ require_relative '../../utils.rb'
 
 Utils.time {
   YEAR = ${current_year}
-  DAY = ${i}
+  DAY = ${the_day}
   LEVEL = ${j}
 
-  input = Utils.read_lines('day${i}-input.txt')
+  input = Utils.read_lines('day${the_day}-input.txt')
   sum = 0
 
   cookie = Utils.get_cookie
@@ -50,11 +52,12 @@ EOF
 COOKIE = \$(shell cat ../../.cookie.txt)
 YEAR = ${current_year}
 DAY = ${i}
+DAY_ROW = ${the_day}
 
 .PHONY: input
 
 input:
-	@curl -s "https://adventofcode.com/\$(YEAR)/day/\$(DAY)/input" -H "Cookie: session=\$(COOKIE)" -H "User-Agent: bash-script by Nael" -o "day\$(DAY)-input.txt" && echo "Input day\$(DAY) récupéré" || echo "Erreur day\$(DAY)"
+	@curl -s "https://adventofcode.com/\$(YEAR)/day/\$(DAY)/input" -H "Cookie: session=\$(COOKIE)" -H "User-Agent: bash-script by Nael" -o "day\$(DAY_ROW)-input.txt" && echo "Input day\$(DAY) récupéré" || echo "Erreur day\$(DAY)"
 
 first:
 	ruby part1.rb
@@ -63,8 +66,8 @@ second:
 	ruby part2.rb
 EOF
 	touch README.txt
-	touch "day${i}-sample-input.txt"
-	touch "day${i}-input.txt"
+	touch "day${the_day}-sample-input.txt"
+	touch "day${the_day}-input.txt"
 	chmod 755 *.txt
 	cd ..
 done
