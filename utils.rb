@@ -392,6 +392,27 @@ module Utils
   # Tableaux
   #################################
 
+  # Échange les valeurs de deux variables ou éléments et les retourne sous forme de tableau.
+  #
+  # @param a [Object] la première valeur
+  # @param b [Object] la seconde valeur
+  # @return [Array(Object, Object)] un tableau contenant les deux valeurs inversées [b, a]
+  #
+  # @example Échange de deux variables indépendantes
+  #   x = "gauche"
+  #   y = "droite"
+  #   x, y = Utils.swap(x, y)
+  #   # x => "droite"
+  #   # y => "gauche"
+  #
+  # @example Utilisation directe du tableau retourné
+  #   Utils.swap(1, 2)
+  #   # => [2, 1]
+  def self.swap(a, b)
+    [b, a]
+  end
+
+
   # Transforme un fichier clé: valeur en hash.
   #
   # @param path [String] chemin du fichier
