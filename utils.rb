@@ -1210,6 +1210,48 @@ module Utils
     nil
   end
 
+
+  # Dijkstra complet : calcule la distance minimale depuis start vers TOUS les
+  # noeuds atteignables du graphe (contrairement a dijkstra qui s'arrete des
+  # qu'il atteint goal). Utile quand on doit ensuite croiser ces distances avec
+  # celles d'un dijkstra lance depuis l'autre bout (ex: retrouver toutes les
+  # cases appartenant a un chemin optimal, pas juste un chemin parmi d'autres).
+  #
+  # @param graph [Hash{Object => Hash{Object => Numeric}}] graphe pondere
+  # @param start [Object] noeud de depart
+  # @return [Hash{Object => Numeric}] distance minimale depuis start pour
+  #   chaque noeud atteint (les noeuds non atteints valent Float::INFINITY)
+  #
+  # @example
+  #   graph = Utils.empty_weighted_graph
+  #   graph["A"]["B"] = 4
+  #   graph["A"]["C"] = 2
+  #   graph["C"]["B"] = 1
+  #   graph["B"]["D"] = 5
+  #   Utils.full_dijkstra(graph, "A")
+  #   # => {"A"=>0, "B"=>3, "C"=>2, "D"=>8}
+  def self.full_dijkstra(graph, start)
+    distances = Hash.new(Float::INFINITY)
+    distances[start] = 0
+    visited = Set.new
+    queue = PQueue.new { |a, b| a[0] < b[0] }
+    queue.push([0, start])
+
+    until queue.empty?
+      dist, node = queue.pop
+      next if visited.include?(node)
+      visited << node
+      graph[node].each do |neighbor, weight|
+        new_dist = dist + weight
+        if new_dist < distances[neighbor]
+          distances[neighbor] = new_dist
+          queue.push([new_dist, neighbor])
+        end
+      end
+    end
+    distances
+  end
+
   # Trouve le chemin minimal entre deux points dans une grille 2D (BFS).
   # Les cases praticables sont celles dont le caractère est différent de +wall+.
   # Retourne le nombre de pas et la liste des positions traversées.
@@ -1468,6 +1510,111 @@ module Utils
       best = result if best.nil? || result > best
     end
     best
+  end
+
+  # === Trouve le chemin simple le plus long entre deux points d'une grille 2D.
+  # Un chemin simple ne repasse jamais deux fois sur la meme case.
+  # Les cases praticables sont celles dont le caractere est different de +wall+.
+  # Retourne le nombre de cases parcourues et la liste des positions traversees.
+  #
+  # ATTENTION : probleme NP-difficile, exploration exhaustive par backtracking.
+  # Le temps de calcul explose sur les grilles ouvertes de grande taille.
+  #
+  # @param grid     [Array<Array<String>>] grille de caracteres
+  # @param start    [Array(Integer,Integer)] position de depart [row, col]
+  # @param goal     [Array(Integer,Integer)] position d'arrivee [row, col]
+  # @param wall     [String] caractere considere comme un mur (par defaut "#")
+  # @param diagonal [Boolean] autorise les deplacements en diagonale (par defaut false)
+  # @param prune    [Boolean] coupe les branches d'ou l'arrivee n'est plus atteignable
+  # @return [Array(Integer, Array<Array(Integer,Integer)>), nil]
+  #   [nombre_de_cases, chemin] ou nil si aucun chemin n'existe
+  #
+  # @example Sans diagonale (4-directionnelle)
+  #   grid = [
+  #     [".", ".", ".", "#"],
+  #     ["#", ".", "#", "."],
+  #     [".", ".", ".", "."]
+  #   ]
+  #   Utils.longest_path_grid(grid, [0, 0], [2, 3])
+  #   # => [7, [[0,0],[0,1],[0,2],[1,1],[2,1],[2,0]... ]]
+  #
+  # @example Point de depart == arrivee
+  #   Utils.longest_path_grid(grid, [0, 0], [0, 0])
+  #   # => [1, [[0,0]]]
+  #
+  # @example Chemin impossible (arrivee bloquee)
+  #   Utils.longest_path_grid(grid, [0, 0], [0, 3])
+  #   # => nil
+  def self.longest_path_grid(grid, start, goal, wall: "#", diagonal: false, prune: true)
+    start = start.split(",").map(&:to_i) if start.is_a?(String)
+    goal = goal.split(",").map(&:to_i) if goal.is_a?(String)
+    height, width = get_size_of_grid(grid)
+
+    return nil if start[0] < 0 || start[0] >= height || start[1] < 0 || start[1] >= width
+    return nil if goal[0] < 0 || goal[0] >= height || goal[1] < 0 || goal[1] >= width
+    return nil if grid[start[0]][start[1]] == wall
+    return nil if grid[goal[0]][goal[1]] == wall
+    return [1, [start]] if start == goal
+
+    dirs = diagonal ? Utils.neighbors8(0, 0) : Utils.neighbors4(0, 0)
+
+    visited = {start => true}
+    path = [start]
+    best_len = 0
+    best_path = nil
+
+    reachable = lambda do |from|
+      seen = {from => true}
+      queue = [from]
+        until queue.empty?
+        row, col = queue.shift
+        return true if [row, col] == goal
+        dirs.each do |dr, dc|
+        nr = row + dr
+        nc = col + dc
+        next if nr < 0 || nr >= height || nc < 0 || nc >= width
+        next if grid[nr][nc] == wall
+        next if visited[[nr, nc]]
+        next if seen[[nr, nc]]
+        seen[[nr, nc]] = true
+        queue << [nr, nc]
+      end
+    end
+    false
+  end
+
+  # --- DFS avec backtracking
+  walk = lambda do |row, col|
+    if [row, col] == goal
+      if path.size > best_len
+        best_len = path.size
+        best_path = path.dup
+      end
+      return
+    end
+
+    return if prune && !reachable.call([row, col])
+
+    dirs.each do |dr, dc|
+    nr = row + dr
+    nc = col + dc
+    next if nr < 0 || nr >= height || nc < 0 || nc >= width
+    next if grid[nr][nc] == wall
+    next if visited[[nr, nc]]
+
+    visited[[nr, nc]] = true
+    path << [nr, nc]
+
+    walk.call(nr, nc)
+
+    path.pop
+    visited.delete([nr, nc])
+    end
+  end
+
+  walk.call(start[0], start[1])
+
+  best_path ? [best_len, best_path] : nil
   end
 
   # Compresse un graphe non pondéré en ne gardant que les nœuds "intéressants"
