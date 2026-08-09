@@ -7,7 +7,7 @@ Utils.time {
   DAY = 21
   LEVEL = 2
 
-  input = Utils.read_lines('day21-input.txt')
+  input = Utils.read_matrix("day21-sample-input.txt").map(&:join)
   sum = 0
 
   cookie = Utils.get_cookie

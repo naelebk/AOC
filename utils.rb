@@ -1252,6 +1252,98 @@ module Utils
     distances
   end
 
+  # Tous les chemins les plus courts : explore le graphe en profondeur depuis
+  # start jusqu'a target, en coupant dès qu'un chemin dépasse la meilleure
+  # longueur trouvée jusque-là. Contrairement à un simple parcours qui s'arrête
+  # au premier chemin trouve, celle-ci garde TOUS les chemins de longueur
+  # minimale, pas juste un seul (utile quand plusieurs chemins minimaux existent
+  # mais n'auront pas le même coût une fois traduits à un niveau superieur).
+  #
+  # @param graph [Hash{Object => Enumerable<Object>}] graphe non pondéré, chaque
+  #   noeud associé à la liste de ses voisins directs
+  # @param start [Object] noeud de départ
+  # @param target [Object] noeud d'arrivée
+  # @return [Array<Array<Object>>] liste de chemins, chaque chemin étant la
+  #   liste ordonnée des noeuds traversés de start à target inclus. Tableau vide
+  #   si target n'est pas atteignable
+  #
+  # @example
+  #   graph = {"A" => Set["B", "C"], "B" => Set["D"], "C" => Set["D"], "D" => Set[]}
+  #   Utils.all_shortest_paths(graph, "A", "D")
+  #   # => [["A", "B", "D"], ["A", "C", "D"]]
+  def self.all_shortest_paths(graph, start, target)
+    best = nil
+    results = []
+
+    explore = lambda do |node, path, visited|
+      return if best && path.size > best
+      if node == target
+        if best.nil? || path.size < best
+          best = path.size
+          results.clear
+        end
+        results << path.dup if path.size == best
+        return
+      end
+      graph[node].each do |neighbor|
+        next if visited.include?(neighbor)
+        visited << neighbor
+        path << neighbor
+        explore.call(neighbor, path, visited)
+        path.pop
+        visited.delete(neighbor)
+      end
+    end
+    
+    explore.call(start, [start], Set.new([start]))
+    results
+  end
+
+  # Construit un graphe non pondéré à partir d'une grille 2D, en reliant chaque
+  # case à ses voisins directs (haut, bas, gauche, droite), et en ignorant les
+  # cases vides (les trous du clavier, genre le coin en bas à gauche du numpad).
+  # Le graphe résultant associe chaque symbole à l'ensemble des symboles
+  # atteignables en un seul déplacement depuis lui.
+  #
+  # Attention : si un même symbole apparaît plusieurs fois dans la grille, ses
+  # occurrences fusionnent dans le graphe (une seule clé, voisins cumulés),
+  # donc cette fonction suppose des symboles uniques par grille, ce qui est le
+  # cas pour les claviers numérique et directionnel de ce puzzle.
+  #
+  # @param grid [Array<Array<String>>] grille rectangulaire de symboles, les
+  #   cases vides étant représentées par une chaîne vide ''
+  # @return [Hash{String => Set<String>}] pour chaque symbole, l'ensemble de
+  #   ses voisins directs sur la grille
+  #
+  # @example
+  #   grid = [
+  #     ['1', '2', '3'],
+  #     ['4', '5', '6']
+  #   ]
+  #   build_graph(grid)
+  #   # => {"1"=>#<Set: {"4", "2"}>,
+  #   #     "2"=>#<Set: {"5", "1", "3"}>,
+  #   #     "3"=>#<Set: {"6", "2"}>,
+  #   #     "4"=>#<Set: {"1", "5"}>,
+  #   #     "5"=>#<Set: {"2", "4", "6"}>,
+  #   #     "6"=>#<Set: {"3", "5"}>}
+  def self.build_graph(grid)
+    graph = Hash.new { |h, k| h[k] = Set.new }
+    grid.each_with_index do |row, y|
+      row.each_with_index do |cell, x|
+        next if cell == ''
+        [[y + 1, x], [y - 1, x], [y, x + 1], [y, x - 1]].each do |ny, nx|
+          next if ny < 0 || ny >= grid.size
+          next if nx < 0 || nx >= grid[ny].size
+          neighbor = grid[ny][nx]
+          next if neighbor == ''
+          graph[cell] << neighbor
+        end
+      end
+    end
+    graph
+  end
+
   # Trouve le chemin minimal entre deux points dans une grille 2D (BFS).
   # Les cases praticables sont celles dont le caractère est différent de +wall+.
   # Retourne le nombre de pas et la liste des positions traversées.
