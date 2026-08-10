@@ -10,7 +10,7 @@ else
 fi
 mkdir "${current_year}"
 test -d "${current_year}" && cd "${current_year}"
-first_day=6
+first_day=1
 last_day=25
 
 for i in $(seq "${first_day}" "${last_day}"); do
@@ -36,7 +36,7 @@ require_relative '../../utils.rb'
 
 Utils.time {
   YEAR = ${current_year}
-  DAY = ${the_day}
+  DAY = ${i}
   LEVEL = ${j}
 
   input = Utils.read_lines('day${the_day}-input.txt')
