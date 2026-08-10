@@ -1449,6 +1449,83 @@ module Utils
     distances
   end 
 
+  # Trouve tous les chemins depuis un noeud de depart (BFS complet).
+  # Retourne un Hash {noeud => chemin complet depuis start}.
+  #
+  # @param graph [Hash{Object => Set<Object>}] graphe
+  # @param start [Object] noeud de depart
+  # @return [Hash{Object => Array<Object>}] chemin (liste de noeuds) depuis start
+  #
+  # @example
+  #   graph = Utils.empty_graph
+  #   graph[1] << 2
+  #   graph[2] << 3
+  #   graph[1] << 4
+  #   Utils.bfs_distances_path(graph, 1)
+  #   # => {1=>[1], 2=>[1, 2], 4=>[1, 4], 3=>[1, 2, 3]}
+  def self.bfs_distances_path(graph, start)
+    paths = { start => [start] }
+    queue = [start]
+    until queue.empty?
+      node = queue.shift
+      graph[node].each do |neighbor|
+        next if paths.key?(neighbor)
+        paths[neighbor] = paths[node] + [neighbor]
+        queue << neighbor
+      end
+    end
+    paths
+  end
+
+  # Trouve la plus grande clique du graphe (Bron-Kerbosch avec pivot).
+  # Retourne la liste des noeuds formant la clique maximum trouvée.
+  #
+  # @param graph [Hash{Object => Set<Object>}] graphe
+  # @return [Array<Object>] liste des noeuds de la plus grande clique
+  #
+  # @example
+  #   graph = Utils.empty_graph
+  #   graph[1] << 2
+  #   graph[2] << 1
+  #   graph[1] << 3
+  #   graph[3] << 1
+  #   graph[2] << 3
+  #   graph[3] << 2
+  #   Utils.max_clique(graph)
+  #   # => [1, 2, 3]
+  def self.max_clique(graph)
+    best = []
+    bron_kerbosch(graph, Set.new, Set.new(graph.keys), Set.new, best)
+    best
+  end
+
+  # Fonction récursive interne pour Bron-Kerbosch avec pivot.
+  # R = clique en cours de construction
+  # P = candidats restants (voisins communs de tous les noeuds de R)
+  # X = noeuds déjà exclus (déjà testés dans une branche précédente)
+  #
+  # @param graph [Hash{Object => Set<Object>}] graphe
+  # @param r [Set<Object>] clique en construction
+  # @param p [Set<Object>] candidats
+  # @param x [Set<Object>] exclus
+  # @param best [Array<Object>] meilleure clique trouvee jusqu'ici (mutee sur place)
+  # @return [void]
+  def self.bron_kerbosch(graph, r, p, x, best)
+    if p.empty? && x.empty?
+      best.replace(r.to_a) if r.size > best.size
+      return
+    end
+
+    pivot = (p | x).max_by { |node| graph[node].size }
+    candidates = p - graph[pivot]
+    candidates.each do |node|
+      neighbors = graph[node]
+      bron_kerbosch(graph, r | [node], p & neighbors, x & neighbors, best)
+      p = p - [node]
+      x = x | [node]
+    end
+  end
+
   # BFS (breadth-first search).
   #
   # @param graph [Hash{Object => Set<Object>}] graphe d’adjacence

@@ -10,7 +10,7 @@ Utils.time {
   DAY = 18
   LEVEL = 1
 
-  input = Utils.read_csv('day18-sample-input.txt').map { |array| array.map(&:to_i) }
+  input = Utils.read_csv('day18-input.txt').map { |array| array.map(&:to_i) }
   start = [0,0]
   finish = [LENGTH - 1, LENGTH - 1]
   grid = Array.new(LENGTH) { ['.'] * LENGTH }
@@ -22,7 +22,7 @@ Utils.time {
 
   puts sum
 
-  # cookie = Utils.get_cookie
-  # Utils.submit_answer(YEAR, DAY, LEVEL, sum, cookie)
+  cookie = Utils.get_cookie
+  Utils.submit_answer(YEAR, DAY, LEVEL, sum, cookie)
 }
 # Execution: 0.540379035 secondes
