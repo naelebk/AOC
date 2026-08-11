@@ -781,11 +781,38 @@ module Utils
   #   Utils.find_in_grid(10, grid)
   #   # => nil
   def self.find_in_grid(value, grid)
+    found = []
     grid.each_with_index do |row, y|
       x = row.index(value)
       return [y, x] if x
     end
     nil
+  end
+
+  # Recherche toutes les occurrences d'une valeur dans une grille 2D.
+  #
+  # @param value [Object] La valeur à rechercher dans la grille.
+  # @param grid [Array<Array<Object>>] La grille 2D dans laquelle effectuer la recherche.
+  # @return [Array<Array<Integer>>, nil] Les coordonnées `[x, y]` des occurrences trouvées, ou `nil` si la valeur n'est pas présente.
+  #
+  # @example
+  #   grid = [
+  #     [1, 2, 3],
+  #     [4, 5, 6],
+  #     [7, 8, 5]
+  #   ]
+  #   Utils.find_all_in_grid(5, grid)
+  #   # => [[1, 1], [2, 2]]
+  #
+  #   Utils.find_all_in_grid(10, grid)
+  #   # => nil
+  def self.find_all_in_grid(value, grid)
+    found = []
+    grid.each_with_index do |row, y|
+      x = row.index(value)
+      found.push([y, x]) if x
+    end
+    found.empty? ? nil : found
   end
 
   # Recherche un nombre à partir de coordonnées x y dans un grille (grid)
@@ -1344,15 +1371,51 @@ module Utils
     graph
   end
 
+  # =====================================================================
+  # Critère de franchissement
+  # =====================================================================
+  # Normalise l'argument +passable+ en un lambda (from_char, to_char) -> bool.
+  # Accepte :
+  #   nil            -> tout sauf le mur (comportement historique)
+  #   String         -> liste blanche de caractères, ex: ".oO"
+  #   Array          -> liste blanche, ex: [".", "o"]
+  #   Regexp         -> le caractère cible doit matcher
+  #   Proc arite 1   -> recoit le caractère cible
+  #   Proc arite 2   -> recoit (caractère courant, caracèere cible)
+  def self.build_passable(passable, wall)
+    case passable
+    when nil
+      ->(_from, to) { to != wall }
+    when Proc
+      passable.arity == 1 ? ->(_from, to) { passable.call(to) } : passable
+    when Regexp
+      ->(_from, to) { passable.match?(to) }
+    when String
+      allowed = passable.chars
+      ->(_from, to) { allowed.include?(to) }
+    when Array
+      allowed = passable
+      ->(_from, to) { allowed.include?(to) }
+    else
+      if passable.respond_to?(:include?)
+        ->(_from, to) { passable.include?(to) }
+      else
+        raise ArgumentError, "passable: type non supporte (#{passable.class})"
+      end
+    end
+  end
+
   # Trouve le chemin minimal entre deux points dans une grille 2D (BFS).
-  # Les cases praticables sont celles dont le caractère est différent de +wall+.
-  # Retourne le nombre de pas et la liste des positions traversées.
+  # Les cases praticables sont determinees par +passable+, ou a defaut par
+  # tout caractere different de +wall+.
+  # Retourne le nombre de pas et la liste des positions traversees.
   #
   # @param grid   [Array<Array<String>>] grille de caractères
-  # @param start  [Array(Integer,Integer)] position de départ [row, col]
-  # @param goal   [Array(Integer,Integer)] position d'arrivée [row, col]
-  # @param wall   [String] caractère considéré comme un mur (par défaut "#")
-  # @param diagonal [Boolean] autorise les déplacements en diagonale (par défaut false)
+  # @param start  [Array(Integer,Integer)] position de depart [row, col]
+  # @param goal   [Array(Integer,Integer)] position d'arrivee [row, col]
+  # @param wall   [String] caractère considéré comme un mur (par defaut "#")
+  # @param passable [nil, String, Array, Regexp, Proc] critère de franchissement
+  # @param diagonal [Boolean] autorise les deplacements en diagonale (par defaut false)
   # @return [Array(Integer, Array<Array(Integer,Integer)>), nil]
   #   [nombre_de_pas, chemin] ou nil si aucun chemin n'existe
   #
@@ -1365,25 +1428,22 @@ module Utils
   #   Utils.bfs_grid_path(grid, [0, 0], [2, 3])
   #   # => [5, [[0,0],[0,1],[1,1],[2,1],[2,2],[2,3]]]
   #
-  # @example Avec diagonale (8-directionnelle)
-  #   Utils.bfs_grid_path(grid, [0, 0], [2, 3], diagonal: true)
-  #   # => [3, [[0,0],[1,1],[2,2],[2,3]]]
+  # @example Liste blanche de caracteres
+  #   Utils.bfs_grid_path(grid, [0, 0], [2, 3], passable: ".oS")
   #
-  # @example Point de départ == arrivée
-  #   Utils.bfs_grid_path(grid, [0, 0], [0, 0])
-  #   # => [0, [[0,0]]]
-  #
-  # @example Chemin impossible (arrivée bloquée)
-  #   Utils.bfs_grid_path(grid, [0, 0], [0, 3])
-  #   # => nil
-  def self.bfs_grid_path(grid, start, goal, wall: "#", diagonal: false)
+  # @example Denivele croissant de 1 max (AoC 2022 jour 12)
+  #   Utils.bfs_grid_path(grid, s, e,
+  #     passable: ->(from, to) { elevation(to) - elevation(from) <= 1 })
+  def self.bfs_grid_path(grid, start, goal, wall: "#", passable: nil, diagonal: false)
     start = start.split(",").map(&:to_i) if start.is_a?(String)
-    goal  = goal.split(",").map(&:to_i)  if goal.is_a?(String)
+    goal = goal.split(",").map(&:to_i) if goal.is_a?(String)
     return [0, [start]] if start == goal
-    height, width = get_size_of_grid(grid)
-    dirs = diagonal ? Utils.neighbors8(0,0) : Utils.neighbors4(0,0)
 
-    visited  = {}
+    height, width = get_size_of_grid(grid)
+    dirs = diagonal ? Utils.neighbors8(0, 0) : Utils.neighbors4(0, 0)
+    can_pass = build_passable(passable, wall)
+
+    visited = {}
     previous = {}
     queue = [start]
     visited[start] = true
@@ -1394,15 +1454,15 @@ module Utils
       dirs.each do |dr, dc|
         nr, nc = row + dr, col + dc
         next if nr < 0 || nr >= height || nc < 0 || nc >= width
-        next if grid[nr][nc] == wall
         next if visited[[nr, nc]]
+        next unless can_pass.call(grid[row][col], grid[nr][nc])
 
         visited[[nr, nc]] = true
         previous[[nr, nc]] = [row, col]
 
         if [nr, nc] == goal
           path = []
-          cur  = goal
+          cur = goal
           while cur
             path.unshift(cur)
             cur = previous[cur]
