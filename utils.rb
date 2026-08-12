@@ -781,7 +781,6 @@ module Utils
   #   Utils.find_in_grid(10, grid)
   #   # => nil
   def self.find_in_grid(value, grid)
-    found = []
     grid.each_with_index do |row, y|
       x = row.index(value)
       return [y, x] if x

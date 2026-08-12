@@ -42,8 +42,8 @@ Utils.time {
   input = Utils.read_lines('day${the_day}-input.txt')
   sum = 0
 
-  cookie = Utils.get_cookie
-  Utils.submit_answer(YEAR, DAY, LEVEL, sum, cookie)
+  #cookie = Utils.get_cookie
+  #Utils.submit_answer(YEAR, DAY, LEVEL, sum, cookie)
 }
 EOF
 		chmod 755 "part${j}.rb"
